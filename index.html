@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>(주) 동림 노무관리</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0056b3">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+    body { font-family: 'Malgun Gothic', sans-serif; background: #f4f6fb; margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
+    .container { width: 100%; max-width: 500px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    
+    .header-title { margin-bottom: 20px; border-bottom: 2px solid #0056b3; padding-bottom: 10px; }
+    .title-wrapper { display: flex; justify-content: space-between; align-items: center; }
+    .title-text h1 { color: #0056b3; font-size: 22px; font-weight: bold; margin: 0; }
+    .logo-img { height: 40px; width: auto; }
+
+    .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .field { display: flex; flex-direction: column; }
+    .field label { font-weight: bold; font-size: 11px; margin-bottom: 4px; color: #666; }
+    .full-width { grid-column: span 2; }
+    
+    input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; -webkit-appearance: none; }
+    .month-input { background: #fffbe6; border: 1px solid #ffd666; font-weight: bold; }
+
+    .btn-row { display: flex; gap: 8px; margin: 15px 0; }
+    button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; color: white; }
+    .save-btn { background: #0056b3; }
+    .send-btn { background: #28a745; }
+
+    .calendar-container { background: white; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+    .days-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; font-weight: bold; background: #f1f3f5; padding: 10px 0; border-bottom: 1px solid #ddd; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .day { border-right: 1px solid #eee; border-top: 1px solid #eee; min-height: 85px; padding: 4px; display: flex; flex-direction: column; align-items: center; }
+    .day-num { font-size: 11px; font-weight: bold; align-self: flex-start; color: #888; margin-bottom: 5px; }
+    
+    .site-input { width: 100%; height: 24px; font-size: 10px; text-align: center; border: 1px solid #f0f0f0; margin-bottom: 5px; border-radius: 4px; background: #fafafa; }
+    .work-input { width: 100%; height: 30px; font-size: 14px; text-align: center; font-weight: bold; border: 1px solid #ccc; background: #fff9db; border-radius: 4px; }
+
+    .summary-section { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .summary-item { background: white; padding: 10px; border: 1px solid #eee; border-radius: 6px; font-size: 12px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    
+    .total-footer { margin-top: 15px; padding-top: 12px; border-top: 2px solid #0056b3; text-align: right; font-weight: bold; font-size: 18px; }
+</style>
+</head>
+<body>
+
+<datalist id="site-suggestions"></datalist>
+
+<div class="container" id="capture-area">
+    <div class="header-title">
+        <div class="title-wrapper">
+            <div class="title-text">
+                <h1>(주) 동 림</h1>
+                <p style="margin:0; font-size:12px; color:#666;">현장 통합 관리시스템</p>
+            </div>
+            <img src="Screenshot 2026-03-12 at 10.57.13.JPG" alt="로고" class="logo-img" onerror="this.style.visibility='hidden';">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <div class="field"><label>성명</label><input type="text" id="user_name" class="auto-save" placeholder="이름"></div>
+        <div class="field"><label>주민등록번호</label><input type="text" id="jumin" class="auto-save" placeholder="000000-0000000" maxlength="14"></div>
+        <div class="field full-width"><label>주소</label><input type="text" id="addr" class="auto-save" placeholder="거주지 주소"></div>
+        <div class="field"><label>휴대폰</label><input type="text" id="phone" class="auto-save phone-format" maxlength="13" placeholder="010-0000-0000"></div>
+        <div class="field"><label>노무단가</label><input type="text" id="unit_price" class="auto-save" value="150,000" oninput="formatPrice(this); calculateTotal();"></div>
+        <div class="field"><label>대상 월</label><input type="month" id="month" class="month-input"></div>
+        <div class="field"><label>입사일자</label><input type="date" id="join_date" class="auto-save"></div>
+    </div>
+
+    <div class="btn-row">
+        <button class="save-btn" onclick="saveJPEG()">이미지로 저장</button>
+        <button class="send-btn" onclick="generatePDF()">PDF파일 전송</button>
+    </div>
+
+    <div class="calendar-container">
+        <div class="days-header">
+            <div style="color:#e63946">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#457b9d">토</div>
+        </div>
+        <div id="calendar" class="calendar"></div>
+    </div>
+
+    <div class="summary-section">
+        <div style="font-weight:bold; font-size:14px; color:#0056b3;">📊 현장별 합계 내역</div>
+        <div id="summary-grid" class="summary-grid"></div>
+        
+        <div class="input-group" style="margin-top:15px;">
+            <div class="field"><label>담당자명</label><input type="text" id="mgr_name" class="auto-save" placeholder="성함"></div>
+            <div class="field"><label>담당 연락처</label><input type="text" id="mgr_phone" class="auto-save phone-format" placeholder="전화번호" maxlength="13"></div>
+        </div>
+
+        <div class="total-footer">
+            <span style="font-size:14px; color:#666; font-weight:normal;">총 공수</span> <span id="total-man-day" style="color:#0056b3">0.0</span> / 
+            <span id="total-amount" style="color:#e63946">0</span>원
+        </div>
+    </div>
+</div>
+
+<script>
+// 기존 로직 유지
+function autoHyphen(v) {
+    v = v.replace(/[^0-9]/g, "");
+    if (v.length < 4) return v;
+    if (v.length < 7) return v.substr(0, 3) + "-" + v.substr(3);
+    if (v.length < 11) return v.substr(0, 3) + "-" + v.substr(3, 3) + "-" + v.substr(6);
+    return v.substr(0, 3) + "-" + v.substr(3, 4) + "-" + v.substr(7);
+}
+document.querySelectorAll('.phone-format').forEach(el => {
+    el.addEventListener('input', function() { this.value = autoHyphen(this.value); });
+});
+document.getElementById("jumin").addEventListener("input", function() {
+    let v = this.value.replace(/[^0-9]/g, '');
+    this.value = v.length <= 6 ? v : v.slice(0, 6) + "-" + v.slice(6, 13);
+});
+function formatPrice(input) {
+    let v = input.value.replace(/[^0-9]/g, '');
+    input.value = v ? Number(v).toLocaleString() : '';
+}
+let customSites = JSON.parse(localStorage.getItem('donglim_custom_sites') || '[]');
+function updateSiteSuggestions() {
+    const datalist = document.getElementById("site-suggestions");
+    datalist.innerHTML = "";
+    [...new Set(customSites)].forEach(site => {
+        const option = document.createElement("option");
+        option.value = site;
+        datalist.appendChild(option);
+    });
+}
+function renderCalendar() {
+    const calendar = document.getElementById("calendar");
+    const monthVal = document.getElementById("month").value;
+    if (!monthVal) return;
+    calendar.innerHTML = "";
+    const [year, month] = monthVal.split('-').map(Number);
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const lastDate = new Date(year, month, 0).getDate();
+    for (let i = 0; i < firstDay; i++) {
+        let div = document.createElement("div");
+        div.className = "day empty";
+        calendar.appendChild(div);
+    }
+    const savedData = JSON.parse(localStorage.getItem('donglim_calendar_' + monthVal) || '{}');
+    for (let i = 1; i <= lastDate; i++) {
+        let dayDiv = document.createElement("div");
+        dayDiv.className = "day";
+        const daySite = savedData[i] ? savedData[i].site : "";
+        const dayWork = savedData[i] ? savedData[i].work : "";
+        dayDiv.innerHTML = `
+            <div class="day-num">${i}</div>
+            <input class="site-input" list="site-suggestions" data-day="${i}" placeholder="현장" value="${daySite}">
+            <input type="number" class="work-input" data-day="${i}" step="0.5" min="0" placeholder="0" value="${dayWork}">
+        `;
+        calendar.appendChild(dayDiv);
+        const sIn = dayDiv.querySelector(".site-input");
+        const wIn = dayDiv.querySelector(".work-input");
+        sIn.addEventListener("blur", function() {
+            let val = this.value.trim();
+            if (val && !customSites.includes(val)) {
+                customSites.push(val);
+                localStorage.setItem('donglim_custom_sites', JSON.stringify(customSites));
+                updateSiteSuggestions();
+            }
+            calculateTotal(); saveAllData();
+        });
+        wIn.addEventListener("input", () => { calculateTotal(); saveAllData(); });
+    }
+    calculateTotal();
+}
+function saveAllData() {
+    const monthVal = document.getElementById("month").value;
+    if(!monthVal) return;
+    const basicData = {};
+    document.querySelectorAll(".auto-save").forEach(input => basicData[input.id] = input.value);
+    localStorage.setItem('donglim_basic', JSON.stringify(basicData));
+    let calendarData = {};
+    document.querySelectorAll(".site-input").forEach(el => {
+        const day = el.dataset.day;
+        if(!calendarData[day]) calendarData[day] = {};
+        calendarData[day].site = el.value;
+    });
+    document.querySelectorAll(".work-input").forEach(el => {
+        calendarData[el.dataset.day].work = el.value;
+    });
+    localStorage.setItem('donglim_calendar_' + monthVal, JSON.stringify(calendarData));
+}
+function calculateTotal() {
+    const sites = document.querySelectorAll(".site-input");
+    const works = document.querySelectorAll(".work-input");
+    const price = parseInt(document.getElementById("unit_price").value.replace(/,/g, '')) || 0;
+    let sums = {}, totalWork = 0;
+    sites.forEach((el, idx) => {
+        const wVal = parseFloat(works[idx].value) || 0;
+        if (wVal > 0) {
+            totalWork += wVal;
+            const key = el.value.trim() || "미입력";
+            sums[key] = (sums[key] || 0) + wVal;
+        }
+    });
+    const grid = document.getElementById("summary-grid");
+    grid.innerHTML = "";
+    Object.keys(sums).forEach(name => {
+        grid.innerHTML += `<div class="summary-item"><b>${name}</b><br>${sums[name].toFixed(1)}공수<br>${(sums[name] * price).toLocaleString()}원</div>`;
+    });
+    document.getElementById("total-man-day").innerText = totalWork.toFixed(1);
+    document.getElementById("total-amount").innerText = Math.floor(totalWork * price).toLocaleString();
+}
+function prepareForCapture() {
+    document.querySelectorAll("button").forEach(b => b.style.display = "none");
+    document.querySelectorAll('input').forEach(input => {
+        const div = document.createElement('div');
+        div.className = 'temp-print-div';
+        const s = window.getComputedStyle(input);
+        div.style.cssText = `width:${s.width}; height:${s.height}; border:none; font-size:${s.fontSize}; text-align:${s.textAlign}; display:flex; align-items:center; justify-content:center; font-weight:bold;`;
+        div.innerText = input.value;
+        input.style.display = 'none';
+        input.parentNode.insertBefore(div, input.nextSibling);
+    });
+}
+function restoreAfterCapture() {
+    document.querySelectorAll('.temp-print-div').forEach(div => div.remove());
+    document.querySelectorAll('input').forEach(input => input.style.display = '');
+    document.querySelectorAll("button").forEach(b => b.style.display = "block");
+}
+async function generatePDF() {
+    prepareForCapture();
+    const canvas = await html2canvas(document.getElementById("capture-area"), { scale: 3, useCORS: true });
+    const pdf = new jspdf.jsPDF("p", "mm", "a4");
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, (canvas.height * 210) / canvas.width);
+    pdf.save("동림노무내역.pdf");
+    restoreAfterCapture();
+}
+async function saveJPEG() {
+    prepareForCapture();
+    const canvas = await html2canvas(document.getElementById("capture-area"), { scale: 3, useCORS: true });
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/jpeg", 0.9);
+    link.download = "동림노무내역.jpg";
+    link.click();
+    restoreAfterCapture();
+}
+window.onload = function() {
+    updateSiteSuggestions();
+    const mInput = document.getElementById("month");
+    if(!mInput.value) mInput.value = new Date().toISOString().slice(0, 7);
+    const basic = JSON.parse(localStorage.getItem('donglim_basic') || '{}');
+    for (let id in basic) { if(document.getElementById(id)) document.getElementById(id).value = basic[id]; }
+    renderCalendar();
+    mInput.addEventListener("change", renderCalendar);
+};
+</script>
+</body>
+</html>
